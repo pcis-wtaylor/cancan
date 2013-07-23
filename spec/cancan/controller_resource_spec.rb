@@ -488,4 +488,25 @@ describe CanCan::ControllerResource do
     lambda { resource.load_and_authorize_resource }.should_not raise_error
     @controller.instance_variable_get(:@project).should be_nil
   end
+  
+  it "should load the resource into an instance variable if params[:id] is specified with a polymorphic dealy" do
+    @params = HashWithIndifferentAccess.new(:controller => "phone_numbers")
+    @controller_class = Class.new
+    @controller = @controller_class.new
+    @ability = Ability.new(nil)
+    stub(@controller).params { @params }
+    stub(@controller).current_ability { @ability }
+    stub(@controller_class).cancan_skipper { {:authorize => {}, :load => {}} }
+    
+    phone_number = PhoneNumber.create!
+    person = Person.create!
+    person.phone_numbers = []
+    person.phone_numbers << phone_number
+    
+    @params.merge!(:action => "show", :id => phone_number.id, :person_id => person.id)
+    resource = CanCan::ControllerResource.new(@controller)
+    resource.load_resource
+    @controller.instance_variable_get(:@phone_number).should == phone_number
+    @controller.instance_variable_get(:@person).should == person
+  end
 end
